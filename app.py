@@ -144,7 +144,7 @@ class_colors_all = {
     'Truck Box': (255, 0, 255)}    # Magenta
 
 # plot img function
-def plot_image_from_output_pred(img, pred):
+def plot_image_from_output_pred(img, pred, total_objects):
     img = img.squeeze(0).cpu().permute(1, 2, 0)
     
     class_names =  {
@@ -171,6 +171,10 @@ def plot_image_from_output_pred(img, pred):
     # Remove x and y ticks
     ax.set_xticks([])
     ax.set_yticks([])
+
+    # Display the total count of objects detected in the image
+    ax.text(5, 15, f"Total Detected Object: {total_objects}", color='white', fontsize=8, weight='bold',
+            bbox={'facecolor': 'black', 'alpha': 1, 'pad': 3})
 
     for idx in range(len(pred["boxes"])):
         xmin, ymin, xmax, ymax = pred["boxes"][idx]
@@ -211,6 +215,7 @@ def plot_image_from_output_pred(img, pred):
 
     plt.close(fig)
 
+
 # predict function
 def make_prediction(model, img, threshold):
     model.eval()
@@ -227,12 +232,16 @@ def make_prediction(model, img, threshold):
         preds[id]['scores'] = preds[id]['scores'][idx_list].cpu()
     return preds
 
+
 def pred_image(model):
     img = Image.open(uploaded_file)
     img_tensor = transforms.ToTensor()(img).unsqueeze(0).to(device)
 
     with torch.no_grad():
         preds = make_prediction(model, img_tensor, pred_threshold)
+
+    # Count objects detected in the image
+    total_objects = sum(len(preds[_idx]['labels']) for _idx in range(len(preds)))
 
     for _idx in range(len(preds)):
         prediction_labels = [class_names_all[label] for label in preds[_idx]['labels'].cpu().numpy()]
@@ -252,7 +261,8 @@ def pred_image(model):
             st.write(f"Total Predicted Object: {len(df)}")
             st.dataframe(df)
         with col2:
-            plot_image_from_output_pred(img_tensor.cpu(), preds[_idx])
+            plot_image_from_output_pred(img_tensor.cpu(), preds[_idx], total_objects)
+
 
 def pred_vid_NRT(model):
 
@@ -301,6 +311,9 @@ def pred_vid_NRT(model):
         with torch.no_grad():
             preds = make_prediction(model, image, pred_threshold)
 
+        # Count objects detected in this frame
+        total_objects = 0
+
         # Draw bounding boxes on the frame
         for _idx in range(len(preds)):
             for idx in range(len(preds[_idx]['boxes'])):
@@ -310,12 +323,24 @@ def pred_vid_NRT(model):
                 class_color = class_colors_all[class_name]
                 class_color_rgb = class_colors_all[class_name]
 
+                total_objects += 1
+
                 cv2.rectangle(frame, (int(xmin), int(ymin)), (int(xmax), int(ymax)), class_color_rgb, 2)
                 
                 # Add label text with scores
                 score = preds[_idx]['scores'][idx].item()
                 label_text = f"{class_name} {score:.3f}"
                 cv2.putText(frame, label_text, (int(xmin), int(ymin) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, class_color_rgb, 2)
+
+        # Draw background rectangle for the text
+        bg_rect_color = (0, 0, 0)
+        text_bg_height = 25
+        cv2.rectangle(frame, (5, 0), (width, text_bg_height), bg_rect_color, -1)
+
+        # Display the total count of objects detected in this frame
+        count_text = f"Total Predicted Object : {total_objects}"
+        text_color = (255, 255, 255)
+        cv2.putText(frame, count_text, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 2)
 
         # Append the processed frame to the list
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -331,12 +356,9 @@ def pred_vid_NRT(model):
     output_dir = tempfile.mkdtemp()
     output_path = os.path.join(output_dir, "output.mp4")
 
-    # Get the frame dimensions from the first processed frame
-    frame_height, frame_width, _ = processed_frames[0].shape
-
     # Create a video writer
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    output_video = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+    output_video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     # Write the processed frames to the video file
     for frame in processed_frames:
@@ -344,15 +366,14 @@ def pred_vid_NRT(model):
 
     # Release the video writer
     output_video.release()
-    
 
-# Display a success message and a download link for the output video file
-
+    # Display a success message and a download link for the output video file
     st.success('Video conversion with detected objects completed!')
     with open(output_path, "rb") as f:
         st.download_button("Download Processed Video", f, file_name="output.mp4")
-    
+
     st.video(output_path)
+
 
 def pred_vid_RT(model):
     video_file = st.video(uploaded_file)
@@ -394,7 +415,10 @@ def pred_vid_RT(model):
         with torch.no_grad():
             preds = make_prediction(model, image, pred_threshold)
 
-        # Draw bounding boxes on the frame
+        # Count objects detected in this frame
+        total_objects = 0
+
+        # Draw bounding boxes on the frame and count objects
         for _idx in range(len(preds)):
             for idx in range(len(preds[_idx]['boxes'])):
                 xmin, ymin, xmax, ymax = preds[_idx]['boxes'][idx].cpu().numpy()
@@ -403,17 +427,30 @@ def pred_vid_RT(model):
                 class_color = class_colors_all[class_name]
                 class_color_rgb = class_colors_all[class_name]
 
+                total_objects += 1
+
                 cv2.rectangle(frame, (int(xmin), int(ymin)), (int(xmax), int(ymax)), class_color_rgb, 2)
-                
+
                 # Add label text with scores
                 score = preds[_idx]['scores'][idx].item()
                 label_text = f"{class_name} {score:.3f}"
                 cv2.putText(frame, label_text, (int(xmin), int(ymin) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, class_color_rgb, 2)
 
-        # Display the frame with bounding boxes
+        # Draw background rectangle for the text
+        bg_rect_color = (0, 0, 0)
+        text_bg_height = 25
+        cv2.rectangle(frame, (5, 0), (width, text_bg_height), bg_rect_color, -1)
+
+        # Display the total count of objects detected in this frame
+        count_text = f"Total Predicted Object : {total_objects}"
+        text_color = (255, 255, 255)
+        cv2.putText(frame, count_text, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 2)
+
+        # Display the frame with bounding boxes and counts
         frame_placeholder.image(frame, channels='RGB')
 
     video.release()
+
 
 # divide the display
 col1, col2 = st.columns(2)
