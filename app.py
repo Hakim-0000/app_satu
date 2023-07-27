@@ -94,21 +94,36 @@ def get_model_instance_segmentation(num_classes, backbone):
         return model
 
 # function to load the trained model
-def get_trained_model(home_dir, backbone, device):
+def get_trained_model(backbone, device): #(home_dir, backbone, device):
     model = get_model_instance_segmentation(7, backbone)
     model.to(device)
+    
+    resnet50 = 'https://github.com/Hakim-0000/app_satu/releases/download/v0.1/model_40_frcnn_fpnv1.pt'
+    resnet50v2 = 'https://github.com/Hakim-0000/app_satu/releases/download/v0.1/model_40_frcnn_fpnv2.pt'
+    mobnetv3 = 'https://github.com/Hakim-0000/app_satu/releases/download/v0.1/model_40_frcnn_mobnet_large_fpn.pt'
+    mobnetv3_320 = 'https://github.com/Hakim-0000/app_satu/releases/download/v0.1/model_40_frcnn_mobnet_large_320fpn.pt'
+    
+    resnet50_state_dict = torch.hub.load_state_dict_from_url(resnet50, map_location=torch.device('cpu'))
+    resnet50v2_state_dict = torch.hub.load_state_dict_from_url(resnet50v2, map_location=torch.device('cpu'))
+    mobnetv3_state_dict = torch.hub.load_state_dict_from_url(mobnetv3, map_location=torch.device('cpu'))
+    mobnetv3_320_state_dict = torch.hub.load_state_dict_from_url(mobnetv3_320, map_location=torch.device('cpu'))
+    
     if backbone == 'ResNet50_fpn':
-        model.load_state_dict(torch.load(os.path.join(home_dir, 'trained_models', 'model_40_frcnn_fpnv1.pt'),
-                                        map_location=torch.device('cpu')))
+        model.load_state_dict(resnet50_state_dict)
+        # model.load_state_dict(torch.load(os.path.join(home_dir, 'trained_models', 'model_40_frcnn_fpnv1.pt'),
+        #                                 map_location=torch.device('cpu')))
     elif backbone == 'ResNet50_fpn_v2':
-        model.load_state_dict(torch.load(os.path.join(home_dir, 'trained_models', 'model_40_frcnn_fpnv2.pt'),
-                                        map_location=torch.device('cpu')))
+        model.load_state_dict(resnet50v2_state_dict)
+        # model.load_state_dict(torch.load(os.path.join(home_dir, 'trained_models', 'model_40_frcnn_fpnv2.pt'),
+        #                                 map_location=torch.device('cpu')))
     elif backbone == 'MobileNet_v3_large_fpn':
-        model.load_state_dict(torch.load(os.path.join(home_dir, 'trained_models', 'model_40_frcnn_mobnet_large_fpn.pt'),
-                                        map_location=torch.device('cpu')))
+        model.load_state_dict(mobnetv3_state_dict)
+        # model.load_state_dict(torch.load(os.path.join(home_dir, 'trained_models', 'model_40_frcnn_mobnet_large_fpn.pt'),
+        #                                 map_location=torch.device('cpu')))
     elif backbone == 'MobileNet_v3_large_320_fpn':
-        model.load_state_dict(torch.load(os.path.join(home_dir, 'trained_models', 'model_40_frcnn_mobnet_large_320fpn.pt'),
-                                        map_location=torch.device('cpu')))
+        model.load_state_dict(mobnetv3_320_state_dict)
+        # model.load_state_dict(torch.load(os.path.join(home_dir, 'trained_models', 'model_40_frcnn_mobnet_large_320fpn.pt'),
+        #                                 map_location=torch.device('cpu')))
     
     return model
         
@@ -408,7 +423,7 @@ def not_realtime():
     if backbone == 'ResNet50_fpn': 
         file_ext = uploaded_file.name.split(".")[-1].lower()
         # Get base model and load it with the trained weight
-        model_used = get_trained_model(home_dir, backbone, device)
+        model_used = get_trained_model(backbone, device)
         
         if file_ext in ['png', 'jpg', 'jpeg']:
             pred_image(model=model_used)
@@ -423,7 +438,7 @@ def not_realtime():
     elif backbone == 'ResNet50_fpn_v2':
         file_ext = uploaded_file.name.split(".")[-1].lower()
         # Get base model and load it with the trained weight
-        model_used = get_trained_model(home_dir, backbone, device)
+        model_used = get_trained_model(backbone, device)
         
         if file_ext in ['png', 'jpg', 'jpeg']:
             pred_image(model=model_used)
@@ -438,7 +453,7 @@ def not_realtime():
     elif backbone == 'MobileNet_v3_large_fpn':
         file_ext = uploaded_file.name.split(".")[-1].lower()
         # Get base model and load it with the trained weight
-        model_used = get_trained_model(home_dir, backbone, device)
+        model_used = get_trained_model(backbone, device)
         
         if file_ext in ['png', 'jpg', 'jpeg']:
             pred_image(model=model_used)
@@ -453,7 +468,7 @@ def not_realtime():
     elif backbone == 'MobileNet_v3_large_320_fpn':
         file_ext = uploaded_file.name.split(".")[-1].lower()
         # Get base model and load it with the trained weight
-        model_used = get_trained_model(home_dir, backbone, device)
+        model_used = get_trained_model(backbone, device)
         
         if file_ext in ['png', 'jpg', 'jpeg']:
             pred_image(model=model_used)
@@ -473,7 +488,7 @@ def realtime():
     if backbone == 'ResNet50_fpn': 
         file_ext = uploaded_file.name.split(".")[-1].lower()
         # Get base model and load it with the trained weight
-        model_used = get_trained_model(home_dir, backbone, device)
+        model_used = get_trained_model(backbone, device)
         
         if file_ext in ['png', 'jpg', 'jpeg']:
             pred_image(model=model_used)
@@ -488,7 +503,7 @@ def realtime():
     elif backbone == 'ResNet50_fpn_v2':
         file_ext = uploaded_file.name.split(".")[-1].lower()
         # Get base model and load it with the trained weight
-        model_used = get_trained_model(home_dir, backbone, device)
+        model_used = get_trained_model(backbone, device)
         
         if file_ext in ['png', 'jpg', 'jpeg']:
             pred_image(model=model_used)
@@ -503,7 +518,7 @@ def realtime():
     elif backbone == 'MobileNet_v3_large_fpn':
         file_ext = uploaded_file.name.split(".")[-1].lower()
         # Get base model and load it with the trained weight
-        model_used = get_trained_model(home_dir, backbone, device)
+        model_used = get_trained_model(backbone, device)
         
         if file_ext in ['png', 'jpg', 'jpeg']:
             pred_image(model=model_used)
@@ -518,7 +533,7 @@ def realtime():
     elif backbone == 'MobileNet_v3_large_320_fpn':
         file_ext = uploaded_file.name.split(".")[-1].lower()
         # Get base model and load it with the trained weight
-        model_used = get_trained_model(home_dir, backbone, device)
+        model_used = get_trained_model(backbone, device)
         
         if file_ext in ['png', 'jpg', 'jpeg']:
             pred_image(model=model_used)
